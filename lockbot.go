@@ -9,6 +9,7 @@ import (
 )
 
 type lock struct {
+	key         string
 	username    string
 	createdDate time.Time
 	notes       string
@@ -40,17 +41,20 @@ func lockHandler(req *slash.Request) (*slash.Response, error) {
 	key, notes := parseCommand(req.Text)
 	currentLock, exists := locks[key]
 	if exists {
-		resp := "Error: '" + key + "' is currently locked (@" + currentLock.username + " at " + currentLock.createdDate.String() + ")"
+		resp := "Error: already locked\n"
+		resp += currentLock.String()
 		return slash.NewInChannelResponse(resp, nil), nil
 	}
 
+	tz, _ := time.LoadLocation("America/Los_Angeles")
 	locks[key] = lock{
+		key:         key,
 		username:    req.UserName,
-		createdDate: time.Now(),
+		createdDate: time.Now().In(tz),
 		notes:       notes,
 	}
 
-	return slash.NewInChannelResponse("Successfully locked "+key, nil), nil
+	return slash.NewInChannelResponse(locks[key].String(), nil), nil
 }
 
 func unlockHandler(req *slash.Request) (*slash.Response, error) {
@@ -76,19 +80,25 @@ func statusHandler(req *slash.Request) (*slash.Response, error) {
 			return slash.NewInChannelResponse("Everything is unlocked!", nil), nil
 		}
 		resp := "Current locks:\n"
-		for lockKey, lockInfo := range locks {
-			resp += lockKey + " by @" + lockInfo.username + " (" + lockInfo.createdDate.String() + ")\n"
+		for _, l := range locks {
+			resp += l.String() + "\n"
 		}
 		return slash.NewInChannelResponse(resp, nil), nil
 	}
 	if !exists {
 		return slash.NewInChannelResponse(key+" is currently unlocked", nil), nil
 	}
-	resp := key + " was locked by " + currentLock.username + " at " + currentLock.createdDate.String()
-	if currentLock.notes != "" {
-		resp += ": " + currentLock.notes
+
+	return slash.NewInChannelResponse(currentLock.String(), nil), nil
+}
+
+func (l lock) String() string {
+	date := l.createdDate.Format("Mon Jan 2 15:04:05 MST")
+	desc := l.key + " locked by @" + l.username + " on " + date
+	if len(l.notes) > 0 {
+		desc += " (" + l.notes + ")"
 	}
-	return slash.NewInChannelResponse(resp, nil), nil
+	return desc
 }
 
 func parseCommand(command string) (string, string) {
