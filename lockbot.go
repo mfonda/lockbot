@@ -73,23 +73,15 @@ func unlockHandler(req *slash.Request) (*slash.Response, error) {
 }
 
 func statusHandler(req *slash.Request) (*slash.Response, error) {
-	key, _ := parseCommand(req.Text)
-	currentLock, exists := locks[key]
-	if key == "" {
-		if len(locks) == 0 {
-			return slash.NewInChannelResponse("Everything is unlocked!", nil), nil
-		}
-		resp := "Current locks:\n"
-		for _, l := range locks {
-			resp += l.String() + "\n"
-		}
-		return slash.NewInChannelResponse(resp, nil), nil
-	}
-	if !exists {
-		return slash.NewInChannelResponse(key+" is currently unlocked", nil), nil
+	if len(locks) == 0 {
+		return slash.NewInChannelResponse("Everything is unlocked!", nil), nil
 	}
 
-	return slash.NewInChannelResponse(currentLock.String(), nil), nil
+	resp := "Current locks:\n"
+	for _, l := range locks {
+		resp += l.String() + "\n"
+	}
+	return slash.NewInChannelResponse(resp, nil), nil
 }
 
 func (l lock) String() string {
