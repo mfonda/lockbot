@@ -43,7 +43,7 @@ func lockHandler(req *slash.Request) (*slash.Response, error) {
 	if exists {
 		resp := "Error: already locked\n"
 		resp += currentLock.String()
-		return slash.NewInChannelResponse(resp, nil), nil
+		return reply(resp)
 	}
 
 	tz, _ := time.LoadLocation("America/Los_Angeles")
@@ -54,14 +54,14 @@ func lockHandler(req *slash.Request) (*slash.Response, error) {
 		notes:       notes,
 	}
 
-	return slash.NewInChannelResponse(locks[key].String(), nil), nil
+	return reply(locks[key].String())
 }
 
 func unlockHandler(req *slash.Request) (*slash.Response, error) {
 	key, _ := parseCommand(req.Text)
 	currentLock, exists := locks[key]
 	if !exists {
-		return slash.NewInChannelResponse(key+" is already unlocked", nil), nil
+		return reply(key + " is already unlocked")
 	}
 	delete(locks, key)
 
@@ -69,19 +69,19 @@ func unlockHandler(req *slash.Request) (*slash.Response, error) {
 	if req.UserName != currentLock.username {
 		resp += " (cc @" + currentLock.username + ")"
 	}
-	return slash.NewInChannelResponse(resp, nil), nil
+	return reply(resp)
 }
 
 func statusHandler(req *slash.Request) (*slash.Response, error) {
 	if len(locks) == 0 {
-		return slash.NewInChannelResponse("Everything is unlocked!", nil), nil
+		return reply("Everything is unlocked!")
 	}
 
 	resp := "Current locks:\n"
 	for _, l := range locks {
 		resp += l.String() + "\n"
 	}
-	return slash.NewInChannelResponse(resp, nil), nil
+	return reply(resp)
 }
 
 func (l lock) String() string {
@@ -91,6 +91,10 @@ func (l lock) String() string {
 		desc += " (" + l.notes + ")"
 	}
 	return desc
+}
+
+func reply(text string) (*slash.Response, error) {
+	return slash.NewInChannelResponse(text, nil), nil
 }
 
 func parseCommand(command string) (string, string) {
