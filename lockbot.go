@@ -17,6 +17,10 @@ type lock struct {
 
 var locks map[string]lock
 
+func init() {
+	locks = make(map[string]lock)
+}
+
 func main() {
 	required := [4]string{"SLACK_VERIFICATION_TOKEN", "SLACK_SSL_CERT_PATH", "SLACK_SSL_KEY_PATH", "SLACK_PORT"}
 	for _, envVar := range required {
@@ -33,7 +37,6 @@ func main() {
 	slash.HandleFunc("/lock", token, lockHandler)
 	slash.HandleFunc("/unlock", token, unlockHandler)
 	slash.HandleFunc("/locks", token, statusHandler)
-	locks = make(map[string]lock)
 	log.Fatal(slash.ListenAndServeTLS(":"+port, certFile, keyFile))
 }
 
