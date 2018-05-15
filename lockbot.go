@@ -32,7 +32,7 @@ func main() {
 
 	slash.HandleFunc("/lock", token, lockHandler)
 	slash.HandleFunc("/unlock", token, unlockHandler)
-	slash.HandleFunc("/lock-status", token, statusHandler)
+	slash.HandleFunc("/locks", token, statusHandler)
 	locks = make(map[string]lock)
 	log.Fatal(slash.ListenAndServeTLS(":"+port, certFile, keyFile))
 }
