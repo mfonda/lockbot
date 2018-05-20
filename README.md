@@ -51,8 +51,9 @@ Example for `/lock`
  - `Command`: `/lock`
  - `Request URL`: `https://example.com/lock` (include port in URL if it's anything other than `443`)
 
-## Future Work
+By default, `lockbot` will persist locks to disk in `.lockbot.json`. A custom path may be specified by
+passing it in as the first argument when running `lockbot`:
 
-The current list of locks is currently just stored in memory, meaning if the `lockbot` process were to stop,
-the list of locks would be lost. This should instead be persisted to disk, and `lockbot` should be able to
-start up using an existng list of locks.
+```
+./lockbot [path to lock json]
+```
