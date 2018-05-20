@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/mfonda/slash"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -9,12 +11,13 @@ import (
 )
 
 type lock struct {
-	key         string
-	username    string
-	createdDate time.Time
-	notes       string
+	Key         string
+	Username    string
+	CreatedDate time.Time
+	Notes       string
 }
 
+var lockfile string = ".lockbot.json"
 var locks map[string]lock
 
 func init() {
@@ -34,6 +37,18 @@ func main() {
 	keyFile := os.Getenv("SLACK_SSL_KEY_PATH")
 	port := os.Getenv("SLACK_PORT")
 
+	if len(os.Args) > 1 {
+		lockfile = os.Args[1]
+		lockJson, err := ioutil.ReadFile(lockfile)
+		if err != nil {
+			log.Fatalf("Failed to read '%s': %s", lockfile, err)
+		}
+		err = json.Unmarshal(lockJson, &locks)
+		if err != nil {
+			log.Fatalf("Failed to parse '%s': %s", lockfile, err)
+		}
+	}
+
 	slash.HandleFunc("/lock", token, lockHandler)
 	slash.HandleFunc("/unlock", token, unlockHandler)
 	slash.HandleFunc("/locks", token, statusHandler)
@@ -51,11 +66,12 @@ func lockHandler(req *slash.Request) (*slash.Response, error) {
 
 	tz, _ := time.LoadLocation("America/Los_Angeles")
 	locks[key] = lock{
-		key:         key,
-		username:    req.UserName,
-		createdDate: time.Now().In(tz),
-		notes:       notes,
+		Key:         key,
+		Username:    req.UserName,
+		CreatedDate: time.Now().In(tz),
+		Notes:       notes,
 	}
+	persist()
 
 	return reply(locks[key].String())
 }
@@ -67,10 +83,11 @@ func unlockHandler(req *slash.Request) (*slash.Response, error) {
 		return reply(key + " is already unlocked")
 	}
 	delete(locks, key)
+	persist()
 
 	resp := "Successfully unlocked " + key
-	if req.UserName != currentLock.username {
-		resp += " (cc @" + currentLock.username + ")"
+	if req.UserName != currentLock.Username {
+		resp += " (cc @" + currentLock.Username + ")"
 	}
 	return reply(resp)
 }
@@ -88,10 +105,10 @@ func statusHandler(req *slash.Request) (*slash.Response, error) {
 }
 
 func (l lock) String() string {
-	date := l.createdDate.Format("Mon Jan 2 15:04:05 MST")
-	desc := l.key + " locked by @" + l.username + " on " + date
-	if len(l.notes) > 0 {
-		desc += " (" + l.notes + ")"
+	date := l.CreatedDate.Format("Mon Jan 2 15:04:05 MST")
+	desc := l.Key + " locked by @" + l.Username + " on " + date
+	if len(l.Notes) > 0 {
+		desc += " (" + l.Notes + ")"
 	}
 	return desc
 }
@@ -109,4 +126,12 @@ func parseCommand(command string) (string, string) {
 		return parts[0], ""
 	}
 	return parts[0], parts[1]
+}
+
+func persist() error {
+	lockJson, err := json.Marshal(locks)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(lockfile, lockJson, 0644)
 }
